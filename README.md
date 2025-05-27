@@ -13,6 +13,8 @@ To make a GPS recording:
     - The pl-gps app will show a message with the location of the saved `gps … .csv` file.
 - Extract the saved GPS data to your computer.
 
+Then, you can load the Neon recording and GPS recorded data into the Visualization Tool.
+
 Briefly, the tool shows three main panels:
 
 - **Left:** A map with the wearer’s trajectory overlaid in blue
