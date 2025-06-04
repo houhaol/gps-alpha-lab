@@ -1,8 +1,9 @@
 To make a GPS recording:
 
 - Download the pl-gps APK
-- Copy it to the Companion Device
+- Copy it to the Companion Device. A decent location is `Internal Storage/Documents`.
 - Open the `Files` app on the Device. Then, find and install the pl-gps APK
+    - You may see a popup and need to first give the `Files` app permission to install the app.
 - Connect Neon, start up the Neon Companion app, and begin a Neon recording.
 - Start up the pl-gps app, accept all permissions (if you have not done so yet), and tap the white button to start a GPS recording
 - Walk around and explore!
