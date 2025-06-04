@@ -1,6 +1,6 @@
 # pl-gps
 
-This repository accompanies the Alpha Lab guide, [Use GPS with Neon to measure the wearer’s location, eye, and head movements]().
+This repository accompanies the Alpha Lab guide, [Use GPS with Neon to measure the wearer’s location, eye, and head movements](https://docs.pupil-labs.com/alpha-lab/gps/).
 
 It contains the source code for an Android application that collects GPS data in a manner that compliments Neon recordings.
 
