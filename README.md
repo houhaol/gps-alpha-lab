@@ -12,7 +12,7 @@ timestamp [ns],latitude,longitude
 
 If you used your own GPS device, you will probably first need to post-hoc synchronize the data with your Neon recording.
 
-__To make a GPS recording:__
+## To make a GPS recording
 
 - [Download](https://drive.google.com/file/d/1tpHiajhlC_T1GSwG-vWQ0D9RSdKAXC0t/view?usp=sharing) (or build) the pl-gps APK.
 - Copy the APK to the Companion Device. A decent location is `Internal Storage/Documents`.
@@ -30,7 +30,7 @@ __To make a GPS recording:__
     - The pl-gps app will show a message with the name of the saved `gps … .csv` file. It will be in the `Documents/GPS` folder found in the `Files` app of the phone.
 - Extract the saved GPS data to your computer either via a file syncing service, email, or via USB cable (using similar steps as when [exporting Neon recordings](https://docs.pupil-labs.com/neon/data-collection/transfer-recordings-via-usb/)).
 
-__Visualization Tool:__
+## Visualization Tool
 
 Now, you can load the Neon recording and GPS recorded data into the Visualization Tool.
 
