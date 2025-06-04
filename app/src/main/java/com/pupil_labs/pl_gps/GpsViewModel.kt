@@ -21,10 +21,6 @@ class GpsViewModel(
     private val _uiState = MutableStateFlow(GpsRecordingUiState())
     val uiState: StateFlow<GpsRecordingUiState> = _uiState.asStateFlow()
 
-    init {
-        repository.bindService()
-    }
-
     fun setUserFolder(userFolder: Uri?) {
         repository.setUserFolder(userFolder)
     }
@@ -107,10 +103,5 @@ class GpsViewModel(
             }
         }
         httpProvider.sendEvent(event)
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        repository.unbindService()
     }
 }

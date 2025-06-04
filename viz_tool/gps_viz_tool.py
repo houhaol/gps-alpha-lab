@@ -99,7 +99,7 @@ def open_and_populate_data():
     # Ensure all DataFrames have the same timestamp format
     imu["timestamp"] = pd.to_datetime(imu["timestamp_iso"])
     world_df["timestamp"] = pd.to_datetime(world_df["timestamp_iso"])
-    gps_df["timestamp"] = pd.to_datetime(gps_df["timestamp"])
+    gps_df["timestamp"] = pd.to_datetime(gps_df["timestamp [ns]"])
     gaze["timestamp"] = pd.to_datetime(gaze["timestamp_iso"])
     events_df["timestamp_iso"] = pd.to_datetime(events_df["timestamp [ns]"], unit="ns")
     events_df["timestamp"] = pd.to_datetime(events_df["timestamp_iso"])

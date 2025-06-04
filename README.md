@@ -1,8 +1,16 @@
 # pl-gps
 
-This repository contains the source code for an Android application that collects GPS data in a manner that compliments Neon recordings. It also contains Python code for a Visualization Tool that allows you to review combined eyetracking and GPS data.
+This repository accompanies the Alpha Lab guide, [Use GPS with Neon to measure the wearer’s location, eye, and head movements]().
 
-It accompanies the Alpha Lab guide, [Use GPS with Neon to measure the wearer’s location, eye, and head movements]().
+It contains the source code for an Android application that collects GPS data in a manner that compliments Neon recordings.
+
+It also contains Python code for a Visualization Tool that allows you to review combined eyetracking and GPS data. The Visualization Tool can accept data from any GPS device, so long as they have been put in a CSV file with the following format:
+
+```
+timestamp [ns],latitude,longitude
+```
+
+If you used your own GPS device, you will probably first need to post-hoc synchronize the data with your Neon recording.
 
 __To make a GPS recording:__
 
@@ -22,7 +30,9 @@ __To make a GPS recording:__
 
 __Visualization Tool:__
 
-Now, you can load the Neon recording and GPS recorded data into the Visualization Tool. The Visualization Tool expects the `Timeseries CSV + Scene Video` download from Pupil Cloud.
+Now, you can load the Neon recording and GPS recorded data into the Visualization Tool.
+
+The Visualization Tool expects the `Timeseries CSV + Scene Video` download from Pupil Cloud.
 
 Place Neon's scene video in the `assets/` folder. If you would like to see the gaze point, then first run a Video Renderer Visualization on Pupil Cloud for the recording and place that video in the `assets/` folder.
 

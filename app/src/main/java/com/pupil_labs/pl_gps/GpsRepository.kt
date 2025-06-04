@@ -11,7 +11,10 @@ import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.io.BufferedWriter
+import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -24,6 +27,11 @@ class GpsRepository(
 
     private val gpsData = mutableListOf<GpsApiModel>()
 
+    private var csvFile: DocumentFile? = null
+    private var csvWriter: BufferedWriter? = null
+    private var writerJob: Job? = null
+    private var csvPath: String? = null
+
     private var service: GpsLocalProvider? = null
 
     private val serviceConnection = object : ServiceConnection {
@@ -32,11 +40,24 @@ class GpsRepository(
             val service = localBinder?.getService()
 
             service?.gpsDataFlow?.let { flow ->
-                CoroutineScope(Dispatchers.IO).launch {
-                    flow.collect {
-                        Log.d("GPS", "Got a GPS datum")
-                        gpsData.add(it)
-                    }
+                writerJob = CoroutineScope(Dispatchers.IO).launch {
+                    flow
+                        .chunked(10)
+                        .collect { batch ->
+                            Log.d("GPS", "Got a batch of GPS data")
+                            batch.forEach {
+                                gpsData.add(it)
+                            }
+
+                            //                        csvWriter?.write("${it.timestamp},${it.latitude},${it.longitude}\n")
+                            //                        csvWriter?.flush()
+
+                            val lines = batch.joinToString("\n") { it ->
+                                "${it.timestamp},${it.latitude},${it.longitude}\n"
+                            }
+                            csvWriter?.write(lines + "\n")
+                            csvWriter?.flush()
+                        }
                 }
             }
         }
@@ -60,7 +81,27 @@ class GpsRepository(
         _userFolder = userFolder
     }
 
-    fun startGpsRecording() = gpsDataSource.startGpsRecording()
+    fun startGpsRecording() {
+        bindService()
+
+        val fileparts = openCSVFile()
+        csvFile = fileparts.first
+        csvPath = fileparts.second
+
+        val outputStream = context.contentResolver.openOutputStream(csvFile?.uri!!, "wa")
+        csvWriter = BufferedWriter(OutputStreamWriter(outputStream!!)).apply {
+            write("timestamp [ns],latitude,longitude\n")
+            flush()
+        }
+
+//        gpsDataSource.startGpsRecording()
+
+        val intent = Intent(context, GpsLocalProvider::class.java)
+        ContextCompat.startForegroundService(context, intent)
+
+        Log.d("GPS", "Sent Foreground service intent")
+    }
+
     fun stopGpsRecording() {
         Log.d("GPS", "Sending stop intent")
 
@@ -68,6 +109,15 @@ class GpsRepository(
             action = GpsLocalProvider.ACTION_STOP_SERVICE
         }
         ContextCompat.startForegroundService(context, stopIntent)
+
+        writerJob?.cancel()
+        writerJob = null
+
+        csvWriter?.flush()
+        csvWriter?.close()
+        csvWriter = null
+
+        unbindService()
     }
 
     fun startStopGpsRecording(): Pair<Boolean, String?> {
@@ -75,16 +125,12 @@ class GpsRepository(
 
         if (isRecording) {
             stopGpsRecording()
-            val path = saveGPSData()
+//            val csvPath = saveGPSData()
             gpsData.clear()
             isRecording = !isRecording
-            return isRecording to path
+            return isRecording to csvPath
         } else {
-            val intent = Intent(context, GpsLocalProvider::class.java)
-            ContextCompat.startForegroundService(context, intent)
-
-            Log.d("GPS", "Sent Foreground service intent")
-
+            startGpsRecording()
             isRecording = !isRecording
             return isRecording to null
         }
@@ -101,6 +147,26 @@ class GpsRepository(
 
     fun currentNumSamples() = gpsData.size
 
+    fun openCSVFile(): Pair<DocumentFile?, String> {
+        val prefs = context.getSharedPreferences("gps_prefs", Context.MODE_PRIVATE)
+        val uriString = prefs.getString("gps_folder_uri", null)
+        val savedUri = uriString?.let { Uri.parse(it) }
+        if (savedUri != null && hasUriPermission(context, savedUri)) {
+            _userFolder = savedUri
+        }
+
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val fileName = "gps_$timestamp.csv"
+
+        Log.d("GPS", "${savedUri}")
+        Log.d("GPS", fileName)
+
+        val gpsFolder = DocumentFile.fromTreeUri(context, _userFolder!!)
+        val file = gpsFolder?.createFile("text/csv", fileName)
+
+        return file to fileName
+    }
+
     fun saveGPSData(): String? {
         val gpsData = fecthAllGpsData()
 
@@ -111,23 +177,9 @@ class GpsRepository(
             Log.d("GPS", "Saving GPS data")
 
             try {
-                val resolver = context.contentResolver
-
-                val prefs = context.getSharedPreferences("gps_prefs", Context.MODE_PRIVATE)
-                val uriString = prefs.getString("gps_folder_uri", null)
-                val savedUri = uriString?.let { Uri.parse(it) }
-                if (savedUri != null && hasUriPermission(context, savedUri)) {
-                    _userFolder = savedUri
-                }
-
-                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                val fileName = "gps_$timestamp.csv"
-
-                Log.d("GPS", "${savedUri}")
-                Log.d("GPS", "${fileName}")
-
-                val gpsFolder = DocumentFile.fromTreeUri(context, _userFolder)
-                val file = gpsFolder?.createFile("text/csv", fileName)
+                val fileparts = openCSVFile()
+                val file = fileparts.first
+                val fileName = fileparts.second
 
                 Log.d("GPSWriter", "Writing to: ${file?.uri}")
 
