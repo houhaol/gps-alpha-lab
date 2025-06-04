@@ -14,11 +14,13 @@ If you used your own GPS device, you will probably first need to post-hoc synchr
 
 __To make a GPS recording:__
 
-- [Download]() (or build) the pl-gps APK.
+- [Download](https://drive.google.com/file/d/1tpHiajhlC_T1GSwG-vWQ0D9RSdKAXC0t/view?usp=sharing) (or build) the pl-gps APK.
 - Copy the APK to the Companion Device. A decent location is `Internal Storage/Documents`.
 - Open the `Files` app on the Device. Then, find and install the APK.
     - You may see a popup and need to first give the `Files` app permission to install the app.
-- Connect Neon, start up the Neon Companion app, and begin a Neon recording.
+- Connect Neon and start up the Neon Companion app
+- Do some figure-8 motions with the Neon and the Companion Device, [as shown here](https://docs.pupil-labs.com/neon/data-collection/calibrating-the-imu/), so that they have a good lock on magnetic north.
+- Begin a Neon recording.
 - Start up the pl-gps app, accept all permissions (if you have not done so yet), and tap the white button to start a GPS recording.
 - Walk around and explore!
 - If you walk past any landmarks of interest, simply click the `Send GPS Event` button in pl-gps.
