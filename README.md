@@ -26,7 +26,7 @@ If you used your own GPS device, you will likely first need to post-hoc synchron
   - If that hotspot is also connected to the Internet, then the gps-alpha-lab app will reverse geocode the Event on the fly, so that it shows up as an address name on Pupil Cloud. Otherwise, it will show up on Pupil Cloud as `gps_event`.
 - When you are finished, first tap the red button in the gps-alpha-lab app, and then stop the Neon recording.
   - The app will show a message with the name of the saved `gps … .csv` file. It will be in the `Documents/GPS` folder found in the `Files` app of the phone.
-- Extract the saved GPS data to your computer either via a file syncing service, email, or via (USB cable using similar steps as when [exporting Neon recordings](https://docs.pupil-labs.com/neon/data-collection/transfer-recordings-via-usb/)).
+- Extract the saved GPS data to your computer either via a file syncing service, email, or via [USB cable using similar steps as when exporting Neon recordings](https://docs.pupil-labs.com/neon/data-collection/transfer-recordings-via-usb/).
 
 ## Visualization Tool
 
