@@ -36,7 +36,7 @@ Now, you can load the Neon recording and GPS recorded data into the Visualizatio
 
 The Visualization Tool expects the `Timeseries CSV + Scene Video` download from Pupil Cloud.
 
-Place Neon's scene video in a sub-directory of the `assets/` folder, named with the recording's Datetime UID (i.e., the name of the folder in `Timeseries CSV` that contains your recording).
+Place Neon's scene video in a sub-directory of the `assets/` folder, named with the recording's Datetime UID (i.e., the name of the folder in `Timeseries Data` that contains your recording). For exmaple, if you recording is in `Timeseries Data/2025-05-31_10-34-57-30558036`, then make an `assets/2025-05-31_10-34-57-30558036/` folder and put the Scene Video in there.
 
 **Tip:** If you would like to see the gaze point in the video, then first run a [Video Renderer Visualization](https://docs.pupil-labs.com/neon/pupil-cloud/visualizations/video-renderer/) on Pupil Cloud for the recording and place that video in the appropriate sub-directory of the `assets/` folder.
 

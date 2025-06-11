@@ -612,8 +612,8 @@ def update_map_on_click(clickData, current_fig):
             current_fig["data"][2]["lon"] = [clicked_lon, new_x]
 
             # Modify wearer position (trace index 3)
-            current_fig["data"][4]["lat"] = [clicked_lat]
-            current_fig["data"][4]["lon"] = [clicked_lon]
+            current_fig["data"][3]["lat"] = [clicked_lat]
+            current_fig["data"][3]["lon"] = [clicked_lon]
 
     return current_fig
 
