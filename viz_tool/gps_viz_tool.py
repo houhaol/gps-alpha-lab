@@ -507,16 +507,16 @@ def map_update_on_currentTime(currentTime, current_fig):
         gaze_azi = row["gaze azi world [deg]"] + 90
 
         # Compute new arrow coordinates
-        new_x = new_lon + 0.0003 * np.cos(np.radians(heading))
-        new_y = new_lat + 0.0003 * np.sin(np.radians(heading))
+        new_x = new_lon + 0.00035 * np.cos(np.radians(heading))
+        new_y = new_lat + 0.00035 * np.sin(np.radians(heading))
 
         # Modify the heading trace (trace index 1)
         current_fig["data"][1]["lat"] = [new_lat, new_y]
         current_fig["data"][1]["lon"] = [new_lon, new_x]
 
         # Compute new arrow coordinates
-        new_x = new_lon + 0.0003 * np.cos(np.radians(gaze_azi))
-        new_y = new_lat + 0.0003 * np.sin(np.radians(gaze_azi))
+        new_x = new_lon + 0.00035 * np.cos(np.radians(gaze_azi))
+        new_y = new_lat + 0.00035 * np.sin(np.radians(gaze_azi))
 
         # Modify the gaze trace (trace index 2)
         current_fig["data"][2]["lat"] = [new_lat, new_y]
@@ -596,16 +596,16 @@ def update_map_on_click(clickData, current_fig):
             clickData = None
 
             # Compute new arrow coordinates
-            new_x = clicked_lon + 0.0003 * np.cos(np.radians(heading))
-            new_y = clicked_lat + 0.0003 * np.sin(np.radians(heading))
+            new_x = clicked_lon + 0.00035 * np.cos(np.radians(heading))
+            new_y = clicked_lat + 0.00035 * np.sin(np.radians(heading))
 
             # Modify the heading trace (trace index 1)
             current_fig["data"][1]["lat"] = [clicked_lat, new_y]
             current_fig["data"][1]["lon"] = [clicked_lon, new_x]
 
             # Compute new arrow coordinates
-            new_x = clicked_lon + 0.0003 * np.cos(np.radians(gaze_azi))
-            new_y = clicked_lat + 0.0003 * np.sin(np.radians(gaze_azi))
+            new_x = clicked_lon + 0.00035 * np.cos(np.radians(gaze_azi))
+            new_y = clicked_lat + 0.00035 * np.sin(np.radians(gaze_azi))
 
             # Modify the gaze trace (trace index 2)
             current_fig["data"][2]["lat"] = [clicked_lat, new_y]
