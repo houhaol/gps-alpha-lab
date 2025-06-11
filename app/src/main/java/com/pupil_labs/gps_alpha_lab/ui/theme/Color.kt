@@ -1,4 +1,4 @@
-package com.pupil_labs.pl_gps.ui.theme
+package com.pupil_labs.gps_alpha_lab.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

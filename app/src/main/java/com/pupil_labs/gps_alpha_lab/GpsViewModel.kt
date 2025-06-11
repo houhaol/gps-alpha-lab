@@ -1,4 +1,4 @@
-package com.pupil_labs.pl_gps
+package com.pupil_labs.gps_alpha_lab
 
 import android.net.Uri
 import android.util.Log

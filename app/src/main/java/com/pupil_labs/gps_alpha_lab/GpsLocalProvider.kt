@@ -1,4 +1,4 @@
-package com.pupil_labs.pl_gps
+package com.pupil_labs.gps_alpha_lab
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -104,7 +104,7 @@ class GpsLocalProvider() : GpsApi, Service() {
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Running GPS Service in background")
             .setContentText("GPS data is being saved")
-            .setSmallIcon(R.drawable.pl_gps)
+            .setSmallIcon(R.drawable.gps_alpha_lab)
             .setOngoing(true)
             .build()
 

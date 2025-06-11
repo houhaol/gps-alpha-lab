@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.pupil_labs.pl_gps"
+    namespace = "com.pupil_labs.gps_alpha_lab"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.pupil_labs.pl_gps"
+        applicationId = "com.pupil_labs.gps_alpha_lab"
         minSdk = 30
         targetSdk = 35
         versionCode = 1

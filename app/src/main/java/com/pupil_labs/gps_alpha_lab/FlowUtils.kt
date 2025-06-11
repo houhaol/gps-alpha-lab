@@ -1,4 +1,4 @@
-package com.pupil_labs.pl_gps
+package com.pupil_labs.gps_alpha_lab
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

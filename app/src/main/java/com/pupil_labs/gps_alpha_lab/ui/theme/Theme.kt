@@ -1,6 +1,5 @@
-package com.pupil_labs.pl_gps.ui.theme
+package com.pupil_labs.gps_alpha_lab.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

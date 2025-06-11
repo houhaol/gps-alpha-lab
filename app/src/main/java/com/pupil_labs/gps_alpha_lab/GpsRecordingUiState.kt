@@ -1,4 +1,4 @@
-package com.pupil_labs.pl_gps
+package com.pupil_labs.gps_alpha_lab
 
 data class GpsRecordingUiState(
     val isRecording: Boolean = false,

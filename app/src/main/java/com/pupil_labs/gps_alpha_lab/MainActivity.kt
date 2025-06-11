@@ -1,4 +1,4 @@
-package com.pupil_labs.pl_gps
+package com.pupil_labs.gps_alpha_lab
 
 import android.Manifest
 import android.app.Activity

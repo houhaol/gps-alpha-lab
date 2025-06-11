@@ -1,4 +1,4 @@
-package com.pupil_labs.pl_gps
+package com.pupil_labs.gps_alpha_lab
 
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
