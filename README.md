@@ -14,7 +14,7 @@ If you used your own GPS device, you will probably first need to post-hoc synchr
 
 ## To make a GPS recording with the pl-gps app
 
-- [Download](https://drive.google.com/file/d/1tpHiajhlC_T1GSwG-vWQ0D9RSdKAXC0t/view?usp=sharing) (or build) the pl-gps APK.
+- [Download](https://github.com/pupil-labs/pl_gps/releases) (or build) the pl-gps APK.
 - Copy the APK to the Companion Device. A decent location is `Internal Storage/Documents`.
 - Open the `Files` app on the Device. Then, find and install the APK.
   - You may see a popup and need to first give the `Files` app permission to install the app.
