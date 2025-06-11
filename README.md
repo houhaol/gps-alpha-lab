@@ -12,7 +12,7 @@ If you used your own GPS device, you will likely first need to post-hoc synchron
 
 ## To make a GPS recording with the gps-alpha-lab app
 
-- [Download](https://github.com/pupil-labs/pl_gps/releases) (or build) the gps-alpha-lab APK.
+- [Download](https://github.com/pupil-labs/gps-alpha-lab/releases) (or build) the gps-alpha-lab APK.
 - Copy the APK to the Companion Device. A decent location is `Internal Storage/Documents`.
 - Open the `Files` app on the Device. Then, find and install the APK.
   - You may see a pop-up and need to first give the `Files` app permission to install the app.
