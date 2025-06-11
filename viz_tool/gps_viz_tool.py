@@ -18,7 +18,6 @@ import sys
 
 import dash
 import dash_player as dp
-import imu_transformations as imu_transformations
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -26,6 +25,8 @@ import plotly.graph_objects as go
 from dash import Input, Output, State, dcc, html
 from geopy.geocoders import Nominatim
 from scipy.interpolate import PchipInterpolator
+
+import imu_transformations as imu_transformations
 
 # parse command line arguments for neon timeseries folder and gps csv file
 parser = argparse.ArgumentParser(description="Neon GPS Visualization Tool")
@@ -247,7 +248,7 @@ def reverse_geocode_events(world_gaze_gps_imu_df, events_df):
     return geocoded_events_df, event_gps_list
 
 
-def calculate_arrow_latlon_coords(lat, lon, heading, scale=0.0003):
+def calculate_arrow_latlon_coords(lat, lon, heading, scale=0.00035):
     """
     Compute the end coordinates for an arrow based on a starting point (lat, lat),
     a heading (in degrees) and a scale factor.
@@ -313,10 +314,29 @@ def create_base_map_figure(world_gaze_gps_imu_df, world_df, geocoded_events_df):
         {"lat": [initial_lat, gaze_arrow_lat], "lon": [initial_lon, gaze_arrow_lon]}
     )
     gaze_line_trace = px.line_map(
-        gaze_arrow_df, lat="lat", lon="lon", color_discrete_sequence=["red"]
+        gaze_arrow_df,
+        lat="lat",
+        lon="lon",
+        color_discrete_sequence=["red"],
     )
     for trace in gaze_line_trace.data:
         fig.add_trace(trace)
+
+    # add markers for all events
+    events_markers = go.Scattermap(
+        lat=geocoded_events_df["lat"],
+        lon=geocoded_events_df["lon"],
+        mode="markers",
+        marker=go.scattermap.Marker(
+            size=12,
+            color="red",
+            opacity=1.0,
+        ),
+        below="",
+        uirevision="'constant-id'",
+        visible=True,
+    )
+    fig.add_trace(events_markers)
 
     # add a marker for the wearer
     wearer_marker = go.Scattermap(
@@ -327,22 +347,13 @@ def create_base_map_figure(world_gaze_gps_imu_df, world_df, geocoded_events_df):
         mode="markers",
         marker=dict(size=18, color="black", opacity=1.0),
         opacity=1.0,
+        below="",
+        uirevision="'constant-id'",
+        visible=True,
     )
     fig.add_trace(wearer_marker)
 
-    # add markers for all events
-    events_markers = go.Scattermap(
-        lat=geocoded_events_df["lat"],
-        lon=geocoded_events_df["lon"],
-        mode="markers",
-        marker=go.scattermap.Marker(
-            size=12,
-            color="red",
-            opacity=0.9,
-        ),
-    )
-
-    fig.add_trace(events_markers)
+    fig.update_traces(selector=dict(type="scattermap"), unselected_marker_opacity=1)
 
     return fig
 
@@ -512,8 +523,8 @@ def map_update_on_currentTime(currentTime, current_fig):
         current_fig["data"][2]["lon"] = [new_lon, new_x]
 
         # Modify wearer position (trace index 3)
-        current_fig["data"][3]["lat"] = [new_lat]
-        current_fig["data"][3]["lon"] = [new_lon]
+        current_fig["data"][4]["lat"] = [new_lat]
+        current_fig["data"][4]["lon"] = [new_lon]
 
     return current_fig
 
@@ -584,84 +595,25 @@ def update_map_on_click(clickData, current_fig):
 
             clickData = None
 
-            # Create an initial map figure using Plotly Express's line_map
-            fig = px.line_map(
-                world_gaze_gps_imu_df,
-                lat="latitude",
-                lon="longitude",
-                zoom=16,
-                height=500,
-            )
+            # Compute new arrow coordinates
+            new_x = clicked_lon + 0.0003 * np.cos(np.radians(heading))
+            new_y = clicked_lat + 0.0003 * np.sin(np.radians(heading))
 
-            # Use an OpenStreetMap basemap (no token needed)
-            fig.update_layout(
-                map_style="open-street-map",
-                clickmode="event+select",
-                margin={"r": 0, "t": 0, "l": 0, "b": 0},
-                showlegend=False,
-                uirevision="constant",
-            )
+            # Modify the heading trace (trace index 1)
+            current_fig["data"][1]["lat"] = [clicked_lat, new_y]
+            current_fig["data"][1]["lon"] = [clicked_lon, new_x]
 
-            heading_arrow_lon, heading_arrow_lat = calculate_arrow_latlon_coords(
-                clicked_lat, clicked_lon, heading
-            )
-            heading_arrow_df = pd.DataFrame(
-                {
-                    "lat": [clicked_lat, heading_arrow_lat],
-                    "lon": [clicked_lon, heading_arrow_lon],
-                }
-            )
-            heading_line_trace = px.line_map(
-                heading_arrow_df,
-                lat="lat",
-                lon="lon",
-                color_discrete_sequence=["black"],
-            )
-            for trace in heading_line_trace.data:
-                fig.add_trace(trace)
+            # Compute new arrow coordinates
+            new_x = clicked_lon + 0.0003 * np.cos(np.radians(gaze_azi))
+            new_y = clicked_lat + 0.0003 * np.sin(np.radians(gaze_azi))
 
-            # add arrow for gaze direction
-            gaze_arrow_lon, gaze_arrow_lat = calculate_arrow_latlon_coords(
-                clicked_lat, clicked_lon, gaze_azi
-            )
-            gaze_arrow_df = pd.DataFrame(
-                {
-                    "lat": [clicked_lat, gaze_arrow_lat],
-                    "lon": [clicked_lon, gaze_arrow_lon],
-                }
-            )
-            gaze_line_trace = px.line_map(
-                gaze_arrow_df, lat="lat", lon="lon", color_discrete_sequence=["red"]
-            )
-            for trace in gaze_line_trace.data:
-                fig.add_trace(trace)
+            # Modify the gaze trace (trace index 2)
+            current_fig["data"][2]["lat"] = [clicked_lat, new_y]
+            current_fig["data"][2]["lon"] = [clicked_lon, new_x]
 
-            # add a marker for the wearer
-            wearer_marker = go.Scattermap(
-                fill="toself",
-                fillcolor="black",
-                lat=[0],
-                lon=[0],
-                mode="markers",
-                marker=dict(size=18, color="black", opacity=1.0),
-                opacity=1.0,  # <--- Force entire trace to be fully opaque
-            )
-            fig.add_trace(wearer_marker)
-
-            # add markers for all events
-            events_markers = go.Scattermap(
-                lat=geocoded_events_df["lat"],
-                lon=geocoded_events_df["lon"],
-                mode="markers",
-                marker=go.scattermap.Marker(
-                    size=12,
-                    color="red",
-                    opacity=0.9,
-                ),
-            )
-            fig.add_trace(events_markers)
-
-            return fig
+            # Modify wearer position (trace index 3)
+            current_fig["data"][4]["lat"] = [clicked_lat]
+            current_fig["data"][4]["lon"] = [clicked_lon]
 
     return current_fig
 
