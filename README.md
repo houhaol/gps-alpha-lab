@@ -1,6 +1,4 @@
-# pl-gps
-
-This repository accompanies the Alpha Lab guide, [Use GPS with Neon to measure the wearer’s location, eye, and head movements](https://docs.pupil-labs.com/alpha-lab/gps/).
+This repository accompanies the Alpha Lab guide, [Use a GPS With Neon to Measure a Wearer's Location, Eye, and Head Movements](https://docs.pupil-labs.com/alpha-lab/gps/).
 
 It contains the source code for an Android application that collects GPS data in a manner that complements Neon recordings.
 
@@ -12,22 +10,22 @@ timestamp [ns],latitude,longitude
 
 If you used your own GPS device, you will likely first need to post-hoc synchronize the data with your Neon recording.
 
-## To make a GPS recording with the pl-gps app
+## To make a GPS recording with the gps-alpha-lab app
 
-- [Download](https://github.com/pupil-labs/pl_gps/releases) (or build) the pl-gps APK.
+- [Download](https://github.com/pupil-labs/pl_gps/releases) (or build) the gps-alpha-lab APK.
 - Copy the APK to the Companion Device. A decent location is `Internal Storage/Documents`.
 - Open the `Files` app on the Device. Then, find and install the APK.
   - You may see a pop-up and need to first give the `Files` app permission to install the app.
 - Connect Neon and start up the Neon Companion app
 - Do some figure-8 motions with the Neon _and_ the Companion Device, [as shown here](https://docs.pupil-labs.com/neon/data-collection/calibrating-the-imu/), so that they both have a good lock on magnetic north.
 - Begin a Neon recording.
-- Start up the pl-gps app, accept all permissions (if you have not done so yet), and tap the white button to start a GPS recording.
+- Start up the gps-alpha-lab app, accept all permissions (if you have not done so yet), and tap the white button to start a GPS recording.
 - Walk around and explore!
-- If you walk past any landmarks of interest, simply click the `Send GPS Event` button in pl-gps.
+- If you walk past any landmarks of interest, simply click the `Send GPS Event` button in the app.
   - You will need to connect the Companion Device to the hotspot of a second phone to enable this functionality.
-  - If that hotspot is also connected to the Internet, then pl-gps will reverse geocode the Event on the fly, so that it shows up as an address name on Pupil Cloud. Otherwise, it will show up on Pupil Cloud as `gps_event`.
-- When you are finished, first tap the red button in pl-gps, and then stop the Neon recording.
-  - The pl-gps app will show a message with the name of the saved `gps … .csv` file. It will be in the `Documents/GPS` folder found in the `Files` app of the phone.
+  - If that hotspot is also connected to the Internet, then the gps-alpha-lab app will reverse geocode the Event on the fly, so that it shows up as an address name on Pupil Cloud. Otherwise, it will show up on Pupil Cloud as `gps_event`.
+- When you are finished, first tap the red button in the gps-alpha-lab app, and then stop the Neon recording.
+  - The app will show a message with the name of the saved `gps … .csv` file. It will be in the `Documents/GPS` folder found in the `Files` app of the phone.
 - Extract the saved GPS data to your computer either via a file syncing service, email, or via (USB cable using similar steps as when [exporting Neon recordings](https://docs.pupil-labs.com/neon/data-collection/transfer-recordings-via-usb/)).
 
 ## Visualization Tool
