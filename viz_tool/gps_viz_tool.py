@@ -3,10 +3,11 @@
 # dependencies = [
 #     "dash",
 #     "dash-player",
+#     "dash-leaflet",
 #     "geopy",
+#     "kaleido",
 #     "numpy",
 #     "pandas",
-#     "plotly",
 #     "scipy",
 # ]
 # ///
@@ -17,16 +18,15 @@ import os
 import sys
 
 import dash
+import dash_leaflet as dl
 import dash_player as dp
+import imu_transformations as imu_transformations
 import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from dash import Input, Output, State, dcc, html
+from dash import ALL, Input, Output, dcc, html
 from geopy.geocoders import Nominatim
+from pie_arc import create_leaflet_pie_sector_coords
 from scipy.interpolate import PchipInterpolator
-
-import imu_transformations as imu_transformations
 
 # parse command line arguments for neon timeseries folder and gps csv file
 parser = argparse.ArgumentParser(description="Neon GPS Visualization Tool")
@@ -248,7 +248,7 @@ def reverse_geocode_events(world_gaze_gps_imu_df, events_df):
     return geocoded_events_df, event_gps_list
 
 
-def calculate_arrow_latlon_coords(lat, lon, heading, scale=0.00035):
+def calculate_arrow_latlon_coords(lat, lon, heading, scale=0.0006):
     """
     Compute the end coordinates for an arrow based on a starting point (lat, lat),
     a heading (in degrees) and a scale factor.
@@ -259,103 +259,50 @@ def calculate_arrow_latlon_coords(lat, lon, heading, scale=0.00035):
     return lat + dlat, lon + dlon
 
 
-# create base map figure
-def create_base_map_figure(world_gaze_gps_imu_df, world_df, geocoded_events_df):
-    # initial_time = df["timestamp"].min()
-    # subset = df[df["timestamp"] <= initial_time]
+def calculate_frustum_latlon_coords(lat, lon, heading, scale=0.0006):
+    theta = math.radians(heading)
+    lat_rad = math.radians(lat)
+    angle_offset = math.radians(50)
 
-    # Create an initial map figure using Plotly Express's line_map
-    fig = px.line_map(
-        world_gaze_gps_imu_df, lat="latitude", lon="longitude", zoom=16, height=500
-    )
+    left_theta = theta + angle_offset
+    right_theta = theta - angle_offset
 
-    # Use an OpenStreetMap basemap (no token needed)
-    fig.update_layout(
-        map_style="open-street-map",
-        clickmode="event+select",
-        margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        showlegend=False,
-        uirevision="constant",
-    )
+    left_dlat = scale * math.sin(left_theta)
+    right_dlat = scale * math.sin(right_theta)
 
-    # Add the wearer pos and arrows to the map that corresponds to earliest scene camera frame
-    target_timestamp = pd.Timedelta(seconds=0) + world_df["timestamp"].min()
-    idx = world_gaze_gps_imu_df.index.get_indexer([target_timestamp], method="nearest")[
-        0
-    ]
-    row = world_gaze_gps_imu_df.iloc[idx]
+    left_dlon = scale * math.cos(left_theta) / math.cos(lat_rad)
+    right_dlon = scale * math.cos(right_theta) / math.cos(lat_rad)
 
-    initial_lat = row["latitude"]
-    initial_lon = row["longitude"]
-    inital_heading = row["yaw [deg]"] + 90
-    initial_gaze_azi = row["gaze azi world [deg]"] + 90
+    left_corner = (lat + left_dlat, lon + left_dlon)
+    right_corner = (lat + right_dlat, lon + right_dlon)
 
-    # add arrow for imu heading
-    heading_arrow_lon, heading_arrow_lat = calculate_arrow_latlon_coords(
-        initial_lat, initial_lon, inital_heading
-    )
-    heading_arrow_df = pd.DataFrame(
-        {
-            "lat": [initial_lat, heading_arrow_lat],
-            "lon": [initial_lon, heading_arrow_lon],
-        }
-    )
-    heading_line_trace = px.line_map(
-        heading_arrow_df, lat="lat", lon="lon", color_discrete_sequence=["black"]
-    )
-    for trace in heading_line_trace.data:
-        fig.add_trace(trace)
+    return left_corner, right_corner
 
-    # add arrow for gaze direction
-    gaze_arrow_lon, gaze_arrow_lat = calculate_arrow_latlon_coords(
-        initial_lat, initial_lon, initial_gaze_azi
-    )
-    gaze_arrow_df = pd.DataFrame(
-        {"lat": [initial_lat, gaze_arrow_lat], "lon": [initial_lon, gaze_arrow_lon]}
-    )
-    gaze_line_trace = px.line_map(
-        gaze_arrow_df,
-        lat="lat",
-        lon="lon",
-        color_discrete_sequence=["red"],
-    )
-    for trace in gaze_line_trace.data:
-        fig.add_trace(trace)
 
-    # add markers for all events
-    events_markers = go.Scattermap(
-        lat=geocoded_events_df["lat"],
-        lon=geocoded_events_df["lon"],
-        mode="markers",
-        marker=go.scattermap.Marker(
-            size=12,
-            color="red",
-            opacity=1.0,
-        ),
-        below="",
-        uirevision="'constant-id'",
-        visible=True,
-    )
-    fig.add_trace(events_markers)
+def make_frustum_base(lats, lons):
+    frustum_layer = {
+        "source": {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[lons[i], lats[i]] for i in range(len(lons))],
+                    },
+                }
+            ],
+        },
+        "line": {
+            "width": 0,
+        },
+        "type": "fill",
+        "below": "traces",
+        "color": "rgb(0, 20, 220, 0.2)",
+        "name": "myTriangle",
+    }
 
-    # add a marker for the wearer
-    wearer_marker = go.Scattermap(
-        fill="toself",
-        fillcolor="black",
-        lat=[0],
-        lon=[0],
-        mode="markers",
-        marker=dict(size=18, color="black", opacity=1.0),
-        opacity=1.0,
-        below="",
-        uirevision="'constant-id'",
-        visible=True,
-    )
-    fig.add_trace(wearer_marker)
-
-    fig.update_traces(selector=dict(type="scattermap"), unselected_marker_opacity=1)
-
-    return fig
+    return frustum_layer
 
 
 def find_neon_video_path(neon_folder_path):
@@ -375,6 +322,150 @@ def find_neon_video_path(neon_folder_path):
         return neon_scene_path
 
 
+# 1. Define the properties of the pie
+maximum_radius = 0.001  # Radius in degrees
+pie_start_angle = -50  # Start angle to create a 100-degree arc
+pie_end_angle = 50  # End angle to create a 100-degree arc
+number_of_gradient_layers = 40  # Increased for a smoother gradient
+pie_color = "#007BFF"  # Bright blue
+
+
+def create_base_map(world_gaze_gps_imu_df, world_df, geocoded_events_df):
+    center_lat = world_gaze_gps_imu_df["latitude"].mean()
+    center_lon = world_gaze_gps_imu_df["longitude"].mean()
+
+    # Add the wearer pos and arrows to the map that corresponds to earliest scene camera frame
+    target_timestamp = pd.Timedelta(seconds=0) + world_df["timestamp"].min()
+    idx = world_gaze_gps_imu_df.index.get_indexer([target_timestamp], method="nearest")[
+        0
+    ]
+    row = world_gaze_gps_imu_df.iloc[idx]
+
+    initial_lat = row["latitude"]
+    initial_lon = row["longitude"]
+    # inital_heading = row["yaw [deg]"] + 90
+    # initial_gaze_azi = row["gaze azi world [deg]"] + 90
+
+    final_lat = world_gaze_gps_imu_df.iloc[len(world_gaze_gps_imu_df) - 1]["latitude"]
+    final_lon = world_gaze_gps_imu_df.iloc[len(world_gaze_gps_imu_df) - 1]["longitude"]
+
+    # add markers for all events
+    event_markers = [
+        dl.CircleMarker(
+            center=[event[1].lat, event[1].lon],
+            radius=4,
+            color="red",
+            fill=True,
+            fillColor="red",
+            opacity=1.0,
+            fillOpacity=1.0,
+            stroke=True,
+            children=[dl.Tooltip(content=event[1].location)],
+            id=f"event-marker-{idx + 1}",
+        )
+        for idx, event in enumerate(geocoded_events_df.iterrows())
+    ]
+
+    # Create concentric sectors from largest (most transparent) to smallest (most opaque)
+    pie_arc = []
+    pc = 0
+    for i in range(number_of_gradient_layers, 0, -1):
+        radius = (i / number_of_gradient_layers) * maximum_radius
+        progress = (
+            (number_of_gradient_layers - i) / (number_of_gradient_layers - 1)
+            if number_of_gradient_layers > 1
+            else 1
+        )
+        opacity = progress * 0.2
+
+        # Get the coordinates for the current sector
+        sector_coords = create_leaflet_pie_sector_coords(
+            initial_lat, initial_lon, radius, pie_start_angle, pie_end_angle
+        )
+
+        # Each layer is a dash_leaflet Polygon component.
+        # We set weight=0 to make the border invisible.
+        pie_arc.append(
+            dl.Polygon(
+                positions=sector_coords,
+                fillColor=pie_color,
+                fillOpacity=opacity,
+                stroke=False,  # An alternative way to ensure no border
+                weight=0,
+                id={"type": "pie-arc", "index": pc},
+            )
+        )
+        pc += 1
+
+    map = dl.Map(
+        attributionControl=False,
+        children=[
+            dl.TileLayer(
+                detectRetina=True,
+            ),
+            dl.Polyline(
+                positions=world_gaze_gps_imu_df[["latitude", "longitude"]].values,
+                color="blue",
+                weight=1.5,
+                id="wearer-trajectory",
+            ),
+            dl.CircleMarker(
+                center=[initial_lat, initial_lon],
+                radius=4,
+                color="orange",
+                fill=True,
+                fillColor="orange",
+                opacity=1.0,
+                fillOpacity=1.0,
+                stroke=True,
+                children=[dl.Tooltip(content="GPS Start")],
+                id="start-gps-point",
+            ),
+            dl.CircleMarker(
+                center=[final_lat, final_lon],
+                radius=4,
+                color="orange",
+                fill=True,
+                fillColor="orange",
+                opacity=1.0,
+                fillOpacity=1.0,
+                stroke=True,
+                children=[dl.Tooltip(content="GPS End")],
+                id="end-gps-point",
+            ),
+            dl.LayerGroup(event_markers, id="event-layer"),
+            dl.LayerGroup(pie_arc, id="pie-arc-parent"),
+            dl.CircleMarker(
+                center=[initial_lat, initial_lon],
+                radius=8,
+                color="black",
+                fill=True,
+                fillColor="black",
+                opacity=1.0,
+                fillOpacity=1.0,
+                stroke=True,
+                children=[dl.Tooltip(content="Wearer")],
+                id="wearer-marker",
+            ),
+            dl.Polyline(
+                positions=[
+                    [initial_lat, initial_lon],
+                    [initial_lat, initial_lon],
+                ],
+                color="red",
+                weight=4,
+                id="gaze-arrow",
+            ),
+        ],
+        center=[center_lat, center_lon],
+        zoom=15,
+        style={"height": "50vh"},
+        id="map-graph",
+    )
+
+    return map
+
+
 # load up all data, prepare fig, find neon scene video
 (
     world_gaze_gps_imu_df,
@@ -389,7 +480,7 @@ geocoded_events_df, event_gps_list = reverse_geocode_events(
     world_gaze_gps_imu_df, events_df
 )
 
-fig = create_base_map_figure(world_gaze_gps_imu_df, world_df, geocoded_events_df)
+map = create_base_map(world_gaze_gps_imu_df, world_df, geocoded_events_df)
 neon_scene_path = find_neon_video_path(neon_folder_path)
 
 app_event_options = []
@@ -404,8 +495,7 @@ else:
         for idx, event in enumerate(event_gps_list)
     ]
 
-# create the Dash app
-# and define the layout
+
 app = dash.Dash(__name__, prevent_initial_callbacks=True)
 app.layout = html.Div(
     [
@@ -413,12 +503,10 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
-                        dcc.Graph(
-                            id="map-graph", figure=fig
-                        ),  # Interval component to update every 1 second (1000 milliseconds)
+                        map,
                         dcc.Interval(id="interval", interval=330, n_intervals=0),
                     ],
-                    style={"flex": 1, "padding": "10px"},
+                    style={"flex": 1},
                 ),
                 html.Div(
                     [
@@ -428,12 +516,12 @@ app.layout = html.Div(
                             controls=True,
                             playing=False,
                             width="100%",
-                            height=500,
-                            intervalCurrentTime=330,
+                            height="50vh",
+                            intervalCurrentTime=40,
                             seekTo=0,
                         )
                     ],
-                    style={"flex": 1, "padding": "10px"},
+                    style={"flex": 1},
                 ),
                 html.Div(
                     [
@@ -447,9 +535,8 @@ app.layout = html.Div(
                     ],
                     style={
                         "flex": 1,
-                        "padding": "10px",
                         "overflowY": "scroll",
-                        "maxHeight": "500px",
+                        "maxHeight": "50vh",
                         "border": "1px solid #ccc",
                     },
                 ),
@@ -487,46 +574,91 @@ app.layout = html.Div(
 )
 
 
+global subset_df
+subset_df = None
+
+global trimmed
+trimmed = False
+
+global prev_selected_event
+prev_selected_event = None
+
+global trim_event1
+trim_event1 = None
+
+global trim_event2
+trim_event2 = None
+
+
 # define all the Dash callbacks that enable user interaction.
 # they are called and managed by the Dash framework
 @app.callback(
-    Output("map-graph", "figure", allow_duplicate=True),
+    Output("wearer-marker", "center", allow_duplicate=True),
+    Output("gaze-arrow", "positions", allow_duplicate=True),
+    Output({"type": "pie-arc", "index": ALL}, "positions", allow_duplicate=True),
     Input("video-player", "currentTime"),
-    State("map-graph", "figure"),
 )
-def map_update_on_currentTime(currentTime, current_fig):
-    target_timestamp = pd.Timedelta(seconds=currentTime) + world_df["timestamp"].min()
-    idx = gps_imu_df.index.get_indexer([target_timestamp], method="nearest")[0]
+def map_update_on_currentTime(currentTime):
+    global subset_df
+    global trimmed
+    if currentTime is None:
+        return dash.no_update
 
-    # if row is not None:
-    if idx < len(gps_imu_df):
-        row = gps_imu_df.iloc[idx]
+    target_timestamp = pd.Timedelta(seconds=currentTime) + world_df["timestamp"].min()
+
+    idx = 0
+    df_len = 0
+    df_to_sample = []
+    if trimmed:
+        idx = subset_df.index.get_indexer([target_timestamp], method="nearest")[0]
+        df_len = len(subset_df)
+        df_to_sample = subset_df
+    else:
+        idx = gps_imu_df.index.get_indexer([target_timestamp], method="nearest")[0]
+        df_len = len(gps_imu_df)
+        df_to_sample = gps_imu_df
+
+    if idx < df_len:
+        row = df_to_sample.iloc[idx]
         new_lon = row["longitude"]
         new_lat = row["latitude"]
         heading = row["yaw [deg]"] + 90
         gaze_azi = row["gaze azi world [deg]"] + 90
 
-        # Compute new arrow coordinates
-        new_x = new_lon + 0.00035 * np.cos(np.radians(heading))
-        new_y = new_lat + 0.00035 * np.sin(np.radians(heading))
+        pie_heading = None
+        if np.isnan(heading):
+            pie_heading = 0
+        else:
+            pie_heading = heading
 
-        # Modify the heading trace (trace index 1)
-        current_fig["data"][1]["lat"] = [new_lat, new_y]
-        current_fig["data"][1]["lon"] = [new_lon, new_x]
+        pie_positions = []
+        for i in range(number_of_gradient_layers, 0, -1):
+            radius = (i / number_of_gradient_layers) * maximum_radius
 
-        # Compute new arrow coordinates
-        new_x = new_lon + 0.00035 * np.cos(np.radians(gaze_azi))
-        new_y = new_lat + 0.00035 * np.sin(np.radians(gaze_azi))
+            # Get the coordinates for the current sector
+            sector_coords = create_leaflet_pie_sector_coords(
+                new_lat,
+                new_lon,
+                radius,
+                pie_start_angle + pie_heading,
+                pie_end_angle + pie_heading,
+            )
+            pie_positions.append(sector_coords)
 
-        # Modify the gaze trace (trace index 2)
-        current_fig["data"][2]["lat"] = [new_lat, new_y]
-        current_fig["data"][2]["lon"] = [new_lon, new_x]
+        if np.isnan(gaze_azi):
+            new_x = new_lon
+            new_y = new_lat
+        else:
+            new_x = new_lon + 0.0006 * np.cos(np.radians(gaze_azi))
+            new_y = new_lat + 0.0006 * np.sin(np.radians(gaze_azi))
 
-        # Modify wearer position (trace index 3)
-        current_fig["data"][4]["lat"] = [new_lat]
-        current_fig["data"][4]["lon"] = [new_lon]
+        return (
+            [new_lat, new_lon],
+            [[new_lat, new_lon], [new_y, new_x]],
+            pie_positions,
+        )
 
-    return current_fig
+    return dash.no_update
 
 
 @app.callback(
@@ -535,18 +667,22 @@ def map_update_on_currentTime(currentTime, current_fig):
     Input("event-dropdown-2", "value"),
 )
 def update_video_on_event_selection(start_event, end_event):
+    global trim_event1
+    global trim_event2
     if start_event is not None and end_event is not None:
         # Get the start event's timestamp and convert it to seconds.
         start_timestamp = (
             event_gps_list[start_event - 1]["timestamp"] - world_gps_imu_df.index.min()
         )
         start_timestamp = start_timestamp.total_seconds()
+        trim_event1 = start_event
 
         # Get the end event's timestamp and convert it to seconds.
         end_timestamp = (
             event_gps_list[end_event - 1]["timestamp"] - world_gps_imu_df.index.min()
         )
         end_timestamp = end_timestamp.total_seconds()
+        trim_event2 = end_event
 
         # Return the start timestamp to seek the video to that point.
         return start_timestamp
@@ -555,71 +691,101 @@ def update_video_on_event_selection(start_event, end_event):
 
 
 @app.callback(
-    Output("map-graph", "figure", allow_duplicate=True),
+    Output("wearer-trajectory", "positions", allow_duplicate=True),
     Input("event-dropdown-1", "value"),
     Input("event-dropdown-2", "value"),
-    State("map-graph", "figure"),
 )
-def update_map_on_event_selection(start_event, end_event, current_fig):
+def update_map_on_event_selection(start_event, end_event):
+    global subset_df
+    global trimmed
+    # global trim_event1
+    # global trim_event2
     if start_event is not None and end_event is not None:
         start_timestamp = event_gps_list[start_event - 1]["timestamp"]
         end_timestamp = event_gps_list[end_event - 1]["timestamp"]
+
+        # trim_event1 = start_event
+        # trim_event2 = end_event
 
         subset_df = world_gaze_gps_imu_df[
             (world_gaze_gps_imu_df.index >= start_timestamp)
             & (world_gaze_gps_imu_df.index <= end_timestamp)
         ]
 
-        current_fig["data"][0]["lat"] = subset_df["latitude"].tolist()
-        current_fig["data"][0]["lon"] = subset_df["longitude"].tolist()
+        trimmed = True
 
-        return current_fig
+        return subset_df[["latitude", "longitude"]].values
 
     return dash.no_update
 
 
 @app.callback(
-    Output("map-graph", "figure", allow_duplicate=True),
+    Output("wearer-marker", "center", allow_duplicate=True),
+    Output("gaze-arrow", "positions", allow_duplicate=True),
+    Output({"type": "pie-arc", "index": ALL}, "positions", allow_duplicate=True),
     Input("map-graph", "clickData"),
-    State("map-graph", "figure"),
 )
-def update_map_on_click(clickData, current_fig):
+def update_map_on_click(clickData):
+    global subset_df
+    global trimmed
     if clickData:
-        point = clickData["points"][0]
-        clicked_lon = point["lon"]
+        point = clickData["latlng"]
+        clicked_lon = point["lng"]
         clicked_lat = point["lat"]
-        point_index = point.get("pointIndex")
-        if point_index is not None:
+
+        dist = 0
+        if trimmed:
+            dist = np.sqrt(
+                (subset_df["latitude"] - clicked_lat) ** 2
+                + (subset_df["longitude"] - clicked_lon) ** 2
+            )
+        else:
+            dist = np.sqrt(
+                (gps_imu_df["latitude"] - clicked_lat) ** 2
+                + (gps_imu_df["longitude"] - clicked_lon) ** 2
+            )
+
+        point_index = np.argmin(dist.values)
+
+        closest_lat = []
+        closest_lon = []
+        heading = []
+        gaze_azi = []
+        if trimmed:
+            closest_lat = subset_df.iloc[point_index]["latitude"]
+            closest_lon = subset_df.iloc[point_index]["longitude"]
+            heading = subset_df.iloc[point_index]["yaw [deg]"] + 90
+            gaze_azi = subset_df.iloc[point_index]["gaze azi world [deg]"] + 90
+        else:
+            closest_lat = gps_imu_df.iloc[point_index]["latitude"]
+            closest_lon = gps_imu_df.iloc[point_index]["longitude"]
             heading = gps_imu_df.iloc[point_index]["yaw [deg]"] + 90
             gaze_azi = gps_imu_df.iloc[point_index]["gaze azi world [deg]"] + 90
 
-            clickData = None
+        pie_positions = []
+        for i in range(number_of_gradient_layers, 0, -1):
+            radius = (i / number_of_gradient_layers) * maximum_radius
 
-            # Compute new arrow coordinates
-            new_x = clicked_lon + 0.00035 * np.cos(np.radians(heading))
-            new_y = clicked_lat + 0.00035 * np.sin(np.radians(heading))
+            # Get the coordinates for the current sector
+            sector_coords = create_leaflet_pie_sector_coords(
+                closest_lat,
+                closest_lon,
+                radius,
+                pie_start_angle + heading,
+                pie_end_angle + heading,
+            )
+            pie_positions.append(sector_coords)
 
-            # Modify the heading trace (trace index 1)
-            current_fig["data"][1]["lat"] = [clicked_lat, new_y]
-            current_fig["data"][1]["lon"] = [clicked_lon, new_x]
+        new_x = closest_lon + 0.0006 * np.cos(np.radians(gaze_azi))
+        new_y = closest_lat + 0.0006 * np.sin(np.radians(gaze_azi))
 
-            # Compute new arrow coordinates
-            new_x = clicked_lon + 0.00035 * np.cos(np.radians(gaze_azi))
-            new_y = clicked_lat + 0.00035 * np.sin(np.radians(gaze_azi))
-
-            # Modify the gaze trace (trace index 2)
-            current_fig["data"][2]["lat"] = [clicked_lat, new_y]
-            current_fig["data"][2]["lon"] = [clicked_lon, new_x]
-
-            # Modify wearer position (trace index 3)
-            current_fig["data"][3]["lat"] = [clicked_lat]
-            current_fig["data"][3]["lon"] = [clicked_lon]
-
-    return current_fig
-
-
-global prev_selected_event
-prev_selected_event = None
+        return (
+            [closest_lat, closest_lon],
+            [[closest_lat, closest_lon], [new_y, new_x]],
+            pie_positions,
+        )
+    else:
+        return dash.no_update
 
 
 # Callback to update the map position when the video is clicked.
@@ -630,24 +796,53 @@ prev_selected_event = None
 )
 def seek_video(selected_gps_event, clickData):
     global prev_selected_event
+    global subset_df
+    global trimmed
+    global trim_event1
+    global trim_event2
     if selected_gps_event and selected_gps_event != prev_selected_event:
         # Reset the clickData to None when a new event is selected
         clickData = None
         prev_selected_event = selected_gps_event
 
     if clickData:
-        # Extract the point index from the clickData
-        point_index = clickData["points"][0].get("pointIndex")
-        if point_index is not None:
-            # Get the corresponding timestamp from the dataframe.
+        point = clickData["latlng"]
+        clicked_lon = point["lng"]
+        clicked_lat = point["lat"]
+
+        dist = 0
+        if trimmed:
+            dist = np.sqrt(
+                (subset_df["latitude"] - clicked_lat) ** 2
+                + (subset_df["longitude"] - clicked_lon) ** 2
+            )
+        else:
+            dist = np.sqrt(
+                (world_gps_imu_df["latitude"] - clicked_lat) ** 2
+                + (world_gps_imu_df["longitude"] - clicked_lon) ** 2
+            )
+
+        point_index = np.argmin(dist.values)
+
+        # Get the corresponding timestamp from the dataframe.
+        timestamp = 0
+        if trimmed:
+            timestamp = subset_df.index[point_index] - world_gps_imu_df.index.min()
+        else:
             timestamp = (
                 world_gps_imu_df.index[point_index] - world_gps_imu_df.index.min()
             )
-            # Convert the timestamp to seconds.
-            timestamp = timestamp.total_seconds()
-            return timestamp
+
+        # Convert the timestamp to seconds.
+        timestamp = timestamp.total_seconds()
+        return timestamp
     elif selected_gps_event:
         # Get the selected event's timestamp and convert it to seconds.
+        # if selected_gps_event < trim_event1:
+        # selected_gps_event = trim_event1
+        # elif selected_gps_event > trim_event2:
+        # selected_gps_event = trim_event2
+
         selected_event = event_gps_list[selected_gps_event - 1]
         timestamp = selected_event["timestamp"] - world_gps_imu_df.index.min()
         timestamp = timestamp.total_seconds()
