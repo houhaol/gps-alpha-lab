@@ -5,7 +5,6 @@
 #     "dash-player",
 #     "dash-leaflet",
 #     "geopy",
-#     "kaleido",
 #     "numpy",
 #     "pandas",
 #     "scipy",
