@@ -375,7 +375,7 @@ def create_base_map(world_gaze_gps_imu_df, world_df, geocoded_events_df):
             if number_of_gradient_layers > 1
             else 1
         )
-        opacity = progress * 0.2
+        opacity = progress * 0.06
 
         # Get the coordinates for the current sector
         sector_coords = create_leaflet_pie_sector_coords(
