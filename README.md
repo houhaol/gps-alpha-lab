@@ -1,4 +1,4 @@
-This repository accompanies the Alpha Lab guide, [Use a GPS With Neon to Measure a Wearer's Location, Eye, and Head Movements](https://docs.pupil-labs.com/alpha-lab/gps/).
+This repository accompanies the Alpha Lab guide, [Where did I see that? Eye Tracking & GPS](https://docs.pupil-labs.com/alpha-lab/gps/).
 
 It contains the source code for an Android application that collects GPS data in a manner that complements Neon recordings.
 
@@ -21,7 +21,7 @@ If you used your own GPS device, you will likely first need to post-hoc synchron
 - Begin a Neon recording.
 - Start up the gps-alpha-lab app, accept all permissions (if you have not done so yet), and tap the white button to start a GPS recording.
 - Walk around and explore!
-- If you walk past any landmarks of interest, simply click the `Send GPS Event` button in the app.
+- If you walk past any landmarks of interest, simply tap the `Send GPS Event` button in the app.
   - You will need to connect the Companion Device to the hotspot of a second phone to enable this functionality.
   - If that hotspot is also connected to the Internet, then the gps-alpha-lab app will reverse geocode the Event on the fly, so that it shows up as an address name on Pupil Cloud. Otherwise, it will show up on Pupil Cloud as `gps_event`.
 - When you are finished, first tap the red button in the gps-alpha-lab app, and then stop the Neon recording.
@@ -41,8 +41,11 @@ Place Neon's scene video in a sub-directory of the `assets/` folder, named with 
 You start the tool as follows:
 
 ```
+pip install -r requirements.txt
 python gps_viz_tool.py neon_timeseries_folder_filepath gps_csv_filepath
 ```
+
+The tool has been tested with Python 3.11.
 
 If you use [uv](https://docs.astral.sh/uv/), you can instead do:
 
@@ -56,7 +59,7 @@ Once started, you will see a web address listed in the terminal, typically http:
 
 Briefly, the Visualization Tool shows three main panels:
 
-- **Left:** A map with the wearer’s trajectory overlaid in blue. A black marker denotes the wearer's position. The IMU heading is shown as a black line, and the direction of gaze is shown as a red line. Positions corresponding to Events are shown as red markers.
+- **Left:** A map with the wearer’s trajectory overlaid in blue. A black marker denotes the wearer's position. Neon's Field of View (FoV) is shown as a blue arc, oriented by Neon's IMU heading, and the direction of gaze is shown as a red line. Positions corresponding to Events are shown as red markers.
 - **Middle:** A video playback of the Neon recording.
 - **Right:** A list of Events from the recording.
 
