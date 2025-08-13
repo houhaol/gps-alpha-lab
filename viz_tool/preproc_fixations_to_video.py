@@ -51,7 +51,7 @@ num_fix = len(fix_df)
 
 
 # Show progress bar for frame processing
-n = 1
+
 for i, frame_ts in enumerate(tqdm(frame_timestamps, desc='Annotating video frames')):
     ret, frame = cap.read()
     if not ret:
@@ -61,12 +61,9 @@ for i, frame_ts in enumerate(tqdm(frame_timestamps, desc='Annotating video frame
         row = fix_df[(fix_df['start_ts_ns'] <= frame_ts) & (fix_df['end_ts_ns'] >= frame_ts)].iloc[0]
         x, y = int(row['x']), int(row['y'])
         cv2.circle(frame, (x, y), 15, (0, 0, 255), 3)
-        n += 1
         out.write(frame)
     except:
         out.write(frame)
-    if n > 1000:
-        break
 
 cap.release()
 out.release()
