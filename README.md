@@ -1,7 +1,7 @@
 # Modification
 Preprocess the video to append the fixations on the video frames and visualize into the dash browser. 
 
-
+## --------------------------
 This repository accompanies the Alpha Lab guide, [Where did I see that? Eye Tracking & GPS](https://docs.pupil-labs.com/alpha-lab/gps/).
 
 It contains the source code for an Android application that collects GPS data in a manner that complements Neon recordings.
