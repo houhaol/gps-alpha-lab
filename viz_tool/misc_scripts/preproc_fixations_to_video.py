@@ -11,10 +11,10 @@ import shutil
 
 # Paths
 DATA_DIR = '/mnt/d/BEFIT/ProcessedData/Study/BF002/web_vis/'
-VIDEO_PATH = '/home/houhao/befit/gps-alpha-lab/viz_tool/assets/BF002/world.mp4'
+VIDEO_PATH = '/mnt/d/BEFIT/ProcessedData/Study/BF002/2025-06-30-09-22-16/neon_player/world.mp4'
 FIXATIONS_PATH = os.path.join(DATA_DIR, 'fixations.csv')
 TIMESTAMPS_PATH = os.path.join(DATA_DIR, 'world_timestamps_unix.npy')
-OUTPUT_PATH = '/home/houhao/befit/gps-alpha-lab/viz_tool/assets/BF002/world_annotated.mp4'
+OUTPUT_PATH = '/mnt/d/BEFIT/ProcessedData/Study/BF002/web_vis/world_annotated.mp4'
 
 
 # Load fixations with correct columns
@@ -51,7 +51,6 @@ num_fix = len(fix_df)
 
 
 # Show progress bar for frame processing
-
 for i, frame_ts in enumerate(tqdm(frame_timestamps, desc='Annotating video frames')):
     ret, frame = cap.read()
     if not ret:
@@ -60,7 +59,12 @@ for i, frame_ts in enumerate(tqdm(frame_timestamps, desc='Annotating video frame
     try:
         row = fix_df[(fix_df['start_ts_ns'] <= frame_ts) & (fix_df['end_ts_ns'] >= frame_ts)].iloc[0]
         x, y = int(row['x']), int(row['y'])
-        cv2.circle(frame, (x, y), 15, (0, 0, 255), 3)
+        cv2.circle(frame, (x, y), 10, (0, 0, 255), -1)
+        # Add horizontal dash line across the circle from leftmost of the image to rightmost of the image
+        cv2.line(frame, (0, y), (width, y), (255, 0, 0), 1, lineType=cv2.LINE_AA)
+        # Add vertical dash line across the circle from topmost to bottommost
+        cv2.line(frame, (x, 0), (x, height), (255, 0, 0), 1, lineType=cv2.LINE_AA)
+
         out.write(frame)
     except:
         out.write(frame)

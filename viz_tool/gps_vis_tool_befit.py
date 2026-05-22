@@ -90,20 +90,46 @@ def open_and_populate_data():
     lat_interp = PchipInterpolator(gps_df["time"], gps_df["latitude"])
     lon_interp = PchipInterpolator(gps_df["time"], gps_df["longitude"])
 
-    # interp_tses = (
-    #     np.arange(
-    #         int(gps_df["timestamp [ns]"].min() * 1e-9),
-    #         int(gps_df["timestamp [ns]"].max() * 1e-9),
-    #         0.2,
-    #     )
-    #     * 1e9
-    # )
+    # Clip interpolation to GPS data bounds to avoid extrapolation errors
+    gps_min_ts = gps_df["time"].min()
+    gps_max_ts = gps_df["time"].max()
+    
+    # Get first and last GPS values for constant extrapolation
+    first_lat = gps_df.iloc[0]["latitude"]
+    first_lon = gps_df.iloc[0]["longitude"]
+    last_lat = gps_df.iloc[-1]["latitude"]
+    last_lon = gps_df.iloc[-1]["longitude"]
+    
+    # Get all video timestamps
     interp_tses = world_df["timestamp [ns]"].values
+    
+    # Create arrays for interpolated values
+    interpolated_lats = np.zeros(len(interp_tses))
+    interpolated_lons = np.zeros(len(interp_tses))
+    
+    # Separate timestamps into three regions: before, within, and after GPS range
+    before_mask = interp_tses < gps_min_ts
+    within_mask = (interp_tses >= gps_min_ts) & (interp_tses <= gps_max_ts)
+    after_mask = interp_tses > gps_max_ts
+    
+    # Fill before GPS start with first GPS point
+    interpolated_lats[before_mask] = first_lat
+    interpolated_lons[before_mask] = first_lon
+    
+    # Interpolate within GPS range
+    if np.any(within_mask):
+        interpolated_lats[within_mask] = lat_interp(interp_tses[within_mask])
+        interpolated_lons[within_mask] = lon_interp(interp_tses[within_mask])
+    
+    # Fill after GPS end with last GPS point
+    interpolated_lats[after_mask] = last_lat
+    interpolated_lons[after_mask] = last_lon
+    
     gps_df = pd.DataFrame(
         {
             "timestamp [ns]": interp_tses,
-            "latitude": lat_interp(interp_tses),
-            "longitude": lon_interp(interp_tses),
+            "latitude": interpolated_lats,
+            "longitude": interpolated_lons,
         }
     )
 
@@ -149,10 +175,11 @@ def open_and_populate_data():
         events_df = pd.read_csv(neon_folder_path + "/events.csv")
     except:
         # manually create some events, randomly sample from the world timestamps
+        # manually create some events, randomly sample from the GPS timestamps
         events_df = pd.DataFrame(
             {
-                "timestamp [ns]": np.random.choice(world_df["timestamp [ns]"], size=2, replace=False),
-                "name": ["event_{}".format(i) for i in range(2)],
+            "timestamp [ns]": np.random.choice(gps_df["timestamp [ns]"], size=1, replace=False),
+            "name": ["event_{}".format(i) for i in range(1)],
             }
         )
     # Ensure all DataFrames have the same timestamp format
@@ -222,9 +249,19 @@ def reverse_geocode_events(world_gaze_gps_imu_df, events_df):
         heading = world_row["yaw [deg]"]
         gaze_azi = world_row["gaze azi world [deg]"]
 
+        # Skip events with invalid GPS data (NaN or out of range)
+        if pd.isna(lat) or pd.isna(lon):
+            print(f"Skipping event '{row['name']}' - no GPS data available at timestamp {row['timestamp']}")
+            continue
+
         if reverse_geocode:
             try:
                 location = geolocator.reverse((lat, lon))
+                
+                # Skip if reverse geocoding returned None
+                if location is None:
+                    print(f"Could not reverse geocode event '{row['name']}' at ({lat}, {lon})")
+                    continue
 
                 event_gps_list.append(
                     {
@@ -236,8 +273,8 @@ def reverse_geocode_events(world_gaze_gps_imu_df, events_df):
                         "timestamp": row["timestamp"],
                     }
                 )
-            except Exception:
-                print("Could not reverse geocode event: ", row["name"])
+            except Exception as e:
+                print(f"Could not reverse geocode event '{row['name']}': {e}")
         else:
             event_gps_list.append(
                 {
@@ -252,12 +289,14 @@ def reverse_geocode_events(world_gaze_gps_imu_df, events_df):
 
     # transform it to a dataframe
     if reverse_geocode:
+        # Filter out any events where location is None (safety check)
+        valid_events = [event for event in event_gps_list if event.get("location") is not None]
         geocoded_events_df = pd.DataFrame(
             {
-                "lat": [event["lat"] for event in event_gps_list],
-                "lon": [event["lon"] for event in event_gps_list],
-                "location": [event["location"].address for event in event_gps_list],
-                "size": [12 for event in event_gps_list],
+                "lat": [event["lat"] for event in valid_events],
+                "lon": [event["lon"] for event in valid_events],
+                "location": [event["location"].address for event in valid_events],
+                "size": [12 for event in valid_events],
             }
         )
     else:
@@ -332,6 +371,7 @@ def make_frustum_base(lats, lons):
 
 def find_neon_video_path(neon_folder_path):
     datetime_uid = neon_folder_path.split("/")[-3]
+    print(datetime_uid)
     neon_scene_filename = None
     for filename in os.listdir("./assets/" + datetime_uid):
         if filename.endswith(".mp4"):
